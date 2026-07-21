@@ -60,7 +60,7 @@ export default function ShareNoteModal({ noteId, noteTitle, onClose }: ShareNote
     if (perm === 'view') return; // view is always on
     setShares((prev) => {
       const next = new Map(prev);
-      const perms = new Set(next.get(mobile) ?? ['view']);
+      const perms = new Set<Perm>(next.get(mobile) ?? (['view'] as Perm[]));
       if (perms.has(perm)) {
         perms.delete(perm);
       } else {
@@ -90,11 +90,11 @@ export default function ShareNoteModal({ noteId, noteTitle, onClose }: ShareNote
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div className="modal-overlay" onClick={() => onClose()}>
       <div className="modal share-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h2>Share Note</h2>
-          <button className="btn-icon" onClick={onClose} aria-label="Close">✕</button>
+          <button className="btn-icon" onClick={() => onClose()} aria-label="Close">✕</button>
         </div>
 
         <p className="share-note-name">"{noteTitle}"</p>
@@ -155,7 +155,7 @@ export default function ShareNoteModal({ noteId, noteTitle, onClose }: ShareNote
         )}
 
         <div className="modal-actions">
-          <button className="btn btn-secondary" onClick={onClose} disabled={saving}>
+          <button className="btn btn-secondary" onClick={() => onClose()} disabled={saving}>
             Cancel
           </button>
           <button className="btn btn-primary" onClick={handleSave} disabled={saving || loading}>
