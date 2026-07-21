@@ -4,14 +4,18 @@ let transporter = null;
 
 function getTransporter() {
   if (!transporter) {
+    const port = parseInt(process.env.SMTP_PORT || '465', 10);
     transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST || 'smtp.gmail.com',
-      port: parseInt(process.env.SMTP_PORT || '587', 10),
-      secure: false,
+      port,
+      secure: port === 465,   // true for 465 (SSL), false for 587 (STARTTLS)
       auth: {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASS,
       },
+      connectionTimeout: 30000,   // 30 s — Render can be slow to establish outbound TLS
+      greetingTimeout: 30000,
+      socketTimeout: 60000,
     });
   }
   return transporter;
@@ -51,6 +55,7 @@ export async function verifyEmailConfig() {
     await getTransporter().verify();
     return true;
   } catch {
+    transporter = null;   // reset so next attempt gets a fresh connection
     return false;
   }
 }
