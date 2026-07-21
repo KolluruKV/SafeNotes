@@ -2,37 +2,18 @@ import { useState } from 'react';
 
 interface DeleteConfirmModalProps {
   onClose: () => void;
-  onConfirm: (otp: string) => Promise<void>;
-  onRequestOtp: () => Promise<void>;
-  otpSent: boolean;
+  onConfirm: () => Promise<void>;
 }
 
-export default function DeleteConfirmModal({
-  onClose,
-  onConfirm,
-  onRequestOtp,
-  otpSent,
-}: DeleteConfirmModalProps) {
-  const [otp, setOtp] = useState('');
+export default function DeleteConfirmModal({ onClose, onConfirm }: DeleteConfirmModalProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const handleRequestOtp = async () => {
-    setError('');
-    try {
-      await onRequestOtp();
-    } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
-      setError(msg || 'Failed to send OTP');
-    }
-  };
-
-  const handleConfirm = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleConfirm = async () => {
     setLoading(true);
     setError('');
     try {
-      await onConfirm(otp);
+      await onConfirm();
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
       setError(msg || 'Failed to delete note');
@@ -51,41 +32,19 @@ export default function DeleteConfirmModal({
         </div>
 
         <p className="delete-warning">
-          This action cannot be undone. An OTP will be sent to your email for verification.
+          This action cannot be undone. Are you sure you want to delete this note?
         </p>
 
-        {!otpSent ? (
-          <button className="btn btn-danger btn-full" onClick={handleRequestOtp}>
-            Send OTP to Email
-          </button>
-        ) : (
-          <form onSubmit={handleConfirm}>
-            <div className="form-group">
-              <label htmlFor="delete-otp">Enter OTP from email</label>
-              <input
-                id="delete-otp"
-                type="text"
-                value={otp}
-                onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                placeholder="6-digit OTP"
-                maxLength={6}
-                required
-                autoFocus
-              />
-            </div>
-            {error && <p className="error-text">{error}</p>}
-            <div className="modal-actions">
-              <button type="button" className="btn btn-secondary" onClick={onClose}>
-                Cancel
-              </button>
-              <button type="submit" className="btn btn-danger" disabled={loading || otp.length !== 6}>
-                {loading ? 'Deleting...' : 'Confirm Delete'}
-              </button>
-            </div>
-          </form>
-        )}
+        {error && <p className="error-text">{error}</p>}
 
-        {error && !otpSent && <p className="error-text">{error}</p>}
+        <div className="modal-actions">
+          <button type="button" className="btn btn-secondary" onClick={onClose} disabled={loading}>
+            Cancel
+          </button>
+          <button type="button" className="btn btn-danger" onClick={handleConfirm} disabled={loading}>
+            {loading ? 'Deleting...' : 'Delete'}
+          </button>
+        </div>
       </div>
     </div>
   );

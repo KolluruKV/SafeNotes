@@ -6,7 +6,6 @@ import { fileURLToPath } from 'url';
 import authRoutes from './routes/auth.js';
 import notesRoutes from './routes/notes.js';
 import { initializeSheets } from './services/sheets.js';
-import { verifyEmailConfig } from './services/email.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const FRONTEND_DIST = path.join(__dirname, '..', '..', 'frontend', 'dist');
@@ -51,9 +50,6 @@ async function start() {
       new Promise((_, reject) => setTimeout(() => reject(new Error('Google Sheets connection timed out after 15s. Check GOOGLE_SHEETS_ID and service account permissions.')), 15000)),
     ]);
     console.log('Google Sheets initialized');
-
-    const emailOk = await verifyEmailConfig();
-    console.log(emailOk ? 'Email service configured' : 'Email service not configured - check SMTP settings');
 
     app.listen(PORT, () => {
       console.log(`SafeNotes running on http://localhost:${PORT} [${IS_PROD ? 'production' : 'development'}]`);

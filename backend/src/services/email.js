@@ -6,16 +6,16 @@ function getTransporter() {
   if (!transporter) {
     const port = parseInt(process.env.SMTP_PORT || '465', 10);
     transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST || 'smtp.gmail.com',
+      host: process.env.SMTP_HOST || 'smtp.resend.com',
       port,
-      secure: port === 465,   // true for 465 (SSL), false for 587 (STARTTLS)
+      secure: port === 465,
       auth: {
-        user: process.env.SMTP_USER,
+        user: process.env.SMTP_USER || 'resend',
         pass: process.env.SMTP_PASS,
       },
-      connectionTimeout: 30000,   // 30 s — Render can be slow to establish outbound TLS
-      greetingTimeout: 30000,
-      socketTimeout: 60000,
+      connectionTimeout: 10000,
+      greetingTimeout: 10000,
+      socketTimeout: 30000,
     });
   }
   return transporter;
@@ -35,7 +35,7 @@ export async function sendOTP(email, otp, purpose = 'verification') {
   };
 
   const mailOptions = {
-    from: `"SafeNotes" <${process.env.SMTP_USER}>`,
+    from: process.env.SMTP_FROM || `"SafeNotes" <${process.env.SMTP_USER}>`,
     to: email || process.env.OWNER_EMAIL,
     subject: subjectMap[purpose] || 'SafeNotes - OTP',
     html: `

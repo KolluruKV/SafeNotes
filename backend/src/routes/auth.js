@@ -1,10 +1,5 @@
 import { Router } from 'express';
-import {
-  registerUser,
-  verifyRegistration,
-  loginUser,
-  verifyLogin,
-} from '../services/auth.js';
+import { registerUser, loginUser } from '../services/auth.js';
 import { authMiddleware } from '../middleware/auth.js';
 import { getAllUsers } from '../services/sheets.js';
 
@@ -20,30 +15,10 @@ router.post('/register', async (req, res) => {
   }
 });
 
-router.post('/register/verify', async (req, res) => {
-  try {
-    const { mobile, password, email, otp } = req.body;
-    const result = await verifyRegistration(mobile, password, email, otp);
-    res.json(result);
-  } catch (err) {
-    res.status(400).json({ error: err.message });
-  }
-});
-
 router.post('/login', async (req, res) => {
   try {
     const { mobile, password } = req.body;
     const result = await loginUser(mobile, password);
-    res.json(result);
-  } catch (err) {
-    res.status(400).json({ error: err.message });
-  }
-});
-
-router.post('/login/verify', async (req, res) => {
-  try {
-    const { mobile, otp } = req.body;
-    const result = await verifyLogin(mobile, otp);
     res.json(result);
   } catch (err) {
     res.status(400).json({ error: err.message });

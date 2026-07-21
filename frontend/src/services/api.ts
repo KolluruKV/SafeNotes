@@ -16,10 +16,18 @@ api.interceptors.request.use((config) => {
 
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
-    if (error.response?.status === 401) {
+  async (error) => {
+    const status = error.response?.status;
+    if (status === 401) {
       localStorage.removeItem('token');
       window.location.href = '/login';
+      return Promise.reject(error);
+    }
+    // Retry once on 5xx (cold-start on Render free tier)
+    if (status >= 500 && !error.config._retried) {
+      error.config._retried = true;
+      await new Promise((r) => setTimeout(r, 3000)); // wait 3s then retry
+      return api(error.config);
     }
     return Promise.reject(error);
   }
@@ -27,16 +35,10 @@ api.interceptors.response.use(
 
 export const authApi = {
   register: (mobile: string, password: string, email?: string) =>
-    api.post<MessageResponse>('/auth/register', { mobile, password, email }),
-
-  verifyRegister: (mobile: string, password: string, otp: string, email?: string) =>
-    api.post<AuthResponse>('/auth/register/verify', { mobile, password, email, otp }),
+    api.post<AuthResponse>('/auth/register', { mobile, password, email }),
 
   login: (mobile: string, password: string) =>
-    api.post<MessageResponse>('/auth/login', { mobile, password }),
-
-  verifyLogin: (mobile: string, otp: string) =>
-    api.post<AuthResponse>('/auth/login/verify', { mobile, otp }),
+    api.post<AuthResponse>('/auth/login', { mobile, password }),
 };
 
 export const notesApi = {
@@ -50,11 +52,8 @@ export const notesApi = {
   update: (id: string, title: string, description: string) =>
     api.put<Note>(`/notes/${id}`, { title, description }),
 
-  requestDeleteOtp: (id: string) =>
-    api.post<MessageResponse>(`/notes/${id}/delete-otp`),
-
-  delete: (id: string, otp: string) =>
-    api.delete<MessageResponse>(`/notes/${id}`, { data: { otp } }),
+  delete: (id: string) =>
+    api.delete<MessageResponse>(`/notes/${id}`),
 
   getShares: (id: string) => api.get<ShareEntry[]>(`/notes/${id}/shares`),
 

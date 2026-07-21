@@ -23,7 +23,6 @@ export default function Dashboard() {
   const [selectedNote, setSelectedNote] = useState<Note | null>(null);
   const [selectedSharedNote, setSelectedSharedNote] = useState<SharedNote | null>(null);
   const [showDelete, setShowDelete] = useState(false);
-  const [deleteOtpSent, setDeleteOtpSent] = useState(false);
   const [shareNoteId, setShareNoteId] = useState<string | null>(null);
   const [shareNoteTitle, setShareNoteTitle] = useState('');
 
@@ -101,22 +100,14 @@ export default function Dashboard() {
 
   const handleDeleteRequest = () => {
     setShowDelete(true);
-    setDeleteOtpSent(false);
   };
 
-  const handleRequestDeleteOtp = async () => {
+  const handleConfirmDelete = async () => {
     if (!selectedNote) return;
-    await notesApi.requestDeleteOtp(selectedNote.id);
-    setDeleteOtpSent(true);
-  };
-
-  const handleConfirmDelete = async (otp: string) => {
-    if (!selectedNote) return;
-    await notesApi.delete(selectedNote.id, otp);
+    await notesApi.delete(selectedNote.id);
     setNotes((prev) => prev.filter((n) => n.id !== selectedNote.id));
     setSelectedNote(null);
     setShowDelete(false);
-    setDeleteOtpSent(false);
   };
 
   const handleOpenShare = (id: string, title: string) => {
@@ -215,10 +206,8 @@ export default function Dashboard() {
 
       {showDelete && selectedNote && (
         <DeleteConfirmModal
-          onClose={() => { setShowDelete(false); setDeleteOtpSent(false); }}
+          onClose={() => setShowDelete(false)}
           onConfirm={handleConfirmDelete}
-          onRequestOtp={handleRequestDeleteOtp}
-          otpSent={deleteOtpSent}
         />
       )}
 

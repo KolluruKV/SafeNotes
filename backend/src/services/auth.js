@@ -1,7 +1,6 @@
 import jwt from 'jsonwebtoken';
-import { hashPassword, verifyPassword, generateOTP, hashOTP } from './encryption.js';
-import { findUserByMobile, createUser, saveOTP, verifyOTP } from './sheets.js';
-import { sendOTP } from './email.js';
+import { hashPassword, verifyPassword } from './encryption.js';
+import { findUserByMobile, createUser } from './sheets.js';
 
 const JWT_SECRET = () => process.env.JWT_SECRET || 'fallback-secret';
 const TOKEN_EXPIRY = '24h';
@@ -31,22 +30,8 @@ export async function registerUser(mobile, password, email) {
     throw new Error('Mobile number already registered');
   }
 
-  const otp = generateOTP();
-  const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
-  await saveOTP(mobile, hashOTP(otp), 'register', '', expiresAt);
-  await sendOTP(email || process.env.OWNER_EMAIL, otp, 'register');
-
-  return { message: 'OTP sent to your email for registration verification' };
-}
-
-export async function verifyRegistration(mobile, password, email, otp) {
-  const valid = await verifyOTP(mobile, otp, 'register');
-  if (!valid) {
-    throw new Error('Invalid or expired OTP');
-  }
-
   const passwordHash = hashPassword(password);
-  await createUser(mobile, passwordHash, email || process.env.OWNER_EMAIL);
+  await createUser(mobile, passwordHash, email || '');
   const token = generateToken(mobile);
 
   return { token, message: 'Registration successful' };
@@ -73,36 +58,6 @@ export async function loginUser(mobile, password) {
     throw new Error('Invalid password');
   }
 
-  const otp = generateOTP();
-  const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
-  await saveOTP(mobile, hashOTP(otp), 'login', '', expiresAt);
-  await sendOTP(user.email || process.env.OWNER_EMAIL, otp, 'login');
-
-  return { message: 'OTP sent to your email for login verification' };
-}
-
-export async function verifyLogin(mobile, otp) {
-  const valid = await verifyOTP(mobile, otp, 'login');
-  if (!valid) {
-    throw new Error('Invalid or expired OTP');
-  }
-
   const token = generateToken(mobile);
   return { token, message: 'Login successful' };
-}
-
-export async function requestDeleteOTP(mobile, noteId) {
-  const user = await findUserByMobile(mobile);
-  if (!user) throw new Error('User not found');
-
-  const otp = generateOTP();
-  const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
-  await saveOTP(mobile, hashOTP(otp), 'delete', noteId, expiresAt);
-  await sendOTP(user.email || process.env.OWNER_EMAIL, otp, 'delete');
-
-  return { message: 'Delete OTP sent to your email' };
-}
-
-export async function verifyDeleteOTP(mobile, noteId, otp) {
-  return verifyOTP(mobile, otp, 'delete', noteId);
 }

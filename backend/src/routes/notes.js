@@ -14,7 +14,6 @@ import {
   getSharedNotesByUser,
   getSharedNoteById,
 } from '../services/sheets.js';
-import { requestDeleteOTP, verifyDeleteOTP } from '../services/auth.js';
 
 const router = Router();
 
@@ -210,26 +209,8 @@ router.put('/:id', async (req, res) => {
   }
 });
 
-router.post('/:id/delete-otp', async (req, res) => {
-  try {
-    const note = await getNoteById(req.params.id, req.user.mobile);
-    if (!note) return res.status(404).json({ error: 'Note not found' });
-
-    const result = await requestDeleteOTP(req.user.mobile, req.params.id);
-    res.json(result);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
 router.delete('/:id', async (req, res) => {
   try {
-    const { otp } = req.body;
-    if (!otp) return res.status(400).json({ error: 'OTP is required to delete' });
-
-    const valid = await verifyDeleteOTP(req.user.mobile, req.params.id, otp);
-    if (!valid) return res.status(403).json({ error: 'Invalid or expired OTP' });
-
     const deleted = await deleteNote(req.params.id, req.user.mobile);
     if (!deleted) return res.status(404).json({ error: 'Note not found' });
 
