@@ -1,0 +1,32 @@
+services:
+  - type: web
+    name: safenotes-app
+    runtime: node
+    region: oregon  # change to: singapore, frankfurt, ohio, virginia as needed
+    plan: free      # change to: starter, standard, etc. for paid plans
+    rootDir: .
+    buildCommand: npm install --prefix backend && npm install --prefix frontend && npm run build --prefix frontend
+    startCommand: NODE_ENV=production node backend/src/index.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: ENCRYPTION_KEY
+        sync: false   # set manually in Render dashboard
+      - key: JWT_SECRET
+        sync: false
+      - key: GOOGLE_SHEETS_ID
+        sync: false
+      - key: GOOGLE_SERVICE_ACCOUNT_EMAIL
+        sync: false
+      - key: GOOGLE_PRIVATE_KEY
+        sync: false
+      - key: SMTP_HOST
+        value: smtp.gmail.com
+      - key: SMTP_PORT
+        value: "587"
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: OWNER_EMAIL
+        sync: false
