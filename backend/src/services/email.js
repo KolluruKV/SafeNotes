@@ -59,3 +59,30 @@ export async function verifyEmailConfig() {
     return false;
   }
 }
+
+// ── External OTP email via krankodesigns API ──
+export async function sendLoginOtpEmail(toEmail, otp) {
+  const url = process.env.OTP_EMAIL_URL;
+  const apiKey = process.env.OTP_EMAIL_API_KEY;
+
+  if (!url || !apiKey) {
+    throw new Error('OTP email service is not configured (OTP_EMAIL_URL / OTP_EMAIL_API_KEY missing)');
+  }
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Api-Key': apiKey,
+    },
+    body: JSON.stringify({
+      toEmail,
+      subject: 'Your SafeNotes Login OTP',
+      message: `Your one-time password (OTP) for SafeNotes login is: ${otp}\n\nThis OTP is valid for 5 minutes. Do not share it with anyone.`,
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to send OTP email (status ${response.status})`);
+  }
+}

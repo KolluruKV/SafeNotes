@@ -36,6 +36,12 @@ export interface AuthResponse {
   message: string;
 }
 
+export interface PreAuthResponse {
+  preAuthToken: string;
+  email: string;
+  message: string;
+}
+
 export interface MessageResponse {
   message: string;
 }

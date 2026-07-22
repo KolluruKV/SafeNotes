@@ -1,9 +1,23 @@
 import jwt from 'jsonwebtoken';
 import { hashPassword, verifyPassword } from './encryption.js';
 import { findUserByMobile, createUser } from './sheets.js';
+import { sendLoginOtpEmail } from './email.js';
 
 const JWT_SECRET = () => process.env.JWT_SECRET || 'fallback-secret';
 const TOKEN_EXPIRY = '24h';
+
+// ── In-memory OTP store: preAuthToken -> { otp, expiresAt } ──
+const otpStore = new Map();
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, val] of otpStore) {
+    if (val.expiresAt < now) otpStore.delete(key);
+  }
+}, 60_000);
+
+function generateOtp() {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+}
 
 export function generateToken(mobile) {
   return jwt.sign({ mobile }, JWT_SECRET(), { expiresIn: TOKEN_EXPIRY });
@@ -58,6 +72,43 @@ export async function loginUser(mobile, password) {
     throw new Error('Invalid password');
   }
 
-  const token = generateToken(mobile);
+  // Issue a short-lived pre-auth token; real JWT is issued after OTP verification
+  const preAuthToken = jwt.sign(
+    { mobile, preAuth: true },
+    JWT_SECRET(),
+    { expiresIn: '5m' }
+  );
+
+  // Generate OTP, send via backend (no CORS), store server-side
+  const otp = generateOtp();
+  await sendLoginOtpEmail(user.email, otp);
+  otpStore.set(preAuthToken, { otp, expiresAt: Date.now() + 5 * 60 * 1000 });
+
+  return { preAuthToken, email: user.email, message: 'OTP sent' };
+}
+
+export async function completeLogin(preAuthToken, otp) {
+  let payload;
+  try {
+    payload = jwt.verify(preAuthToken, JWT_SECRET());
+  } catch {
+    throw new Error('OTP session expired. Please login again.');
+  }
+
+  if (!payload.preAuth) {
+    throw new Error('Invalid token.');
+  }
+
+  const stored = otpStore.get(preAuthToken);
+  if (!stored || stored.expiresAt < Date.now()) {
+    otpStore.delete(preAuthToken);
+    throw new Error('OTP has expired. Please login again.');
+  }
+  if (stored.otp !== otp) {
+    throw new Error('Invalid OTP. Please try again.');
+  }
+
+  otpStore.delete(preAuthToken); // single-use
+  const token = generateToken(payload.mobile);
   return { token, message: 'Login successful' };
 }

@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { Note, NoteSummary, SharedNoteSummary, SharedNote, ShareEntry, UserItem, AuthResponse, MessageResponse } from '../types';
+import type { Note, NoteSummary, SharedNoteSummary, SharedNote, ShareEntry, UserItem, AuthResponse, PreAuthResponse, MessageResponse } from '../types';
 
 const api = axios.create({
   baseURL: '/api',
@@ -38,7 +38,10 @@ export const authApi = {
     api.post<AuthResponse>('/auth/register', { mobile, password, email }),
 
   login: (mobile: string, password: string) =>
-    api.post<AuthResponse>('/auth/login', { mobile, password }),
+    api.post<PreAuthResponse>('/auth/login', { mobile, password }),
+
+  completeLogin: (preAuthToken: string, otp: string) =>
+    api.post<AuthResponse>('/auth/complete-login', { preAuthToken, otp }),
 };
 
 export const notesApi = {

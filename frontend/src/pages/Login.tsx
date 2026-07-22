@@ -5,6 +5,13 @@ import { useAuth } from '../context/AuthContext';
 import logo from '../images/savenotes_logo.png';
 
 type AuthMode = 'login' | 'register';
+type LoginStep = 'credentials' | 'otp';
+
+function maskEmail(email: string): string {
+  const [local, domain] = email.split('@');
+  if (!domain) return email;
+  return `${local.slice(0, 2)}***@${domain}`;
+}
 
 export default function Login() {
   const navigate = useNavigate();
@@ -17,20 +24,67 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  // OTP step state
+  const [loginStep, setLoginStep] = useState<LoginStep>('credentials');
+  const [otpInput, setOtpInput] = useState('');
+  const [preAuthToken, setPreAuthToken] = useState('');
+  const [maskedEmail, setMaskedEmail] = useState('');
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
 
     try {
-      const res = mode === 'login'
-        ? await authApi.login(mobile, password)
-        : await authApi.register(mobile, password, email);
+      if (mode === 'register') {
+        const res = await authApi.register(mobile, password, email);
+        login(res.data.token);
+        navigate('/');
+        return;
+      }
+
+      // Login step 1: verify credentials; backend generates OTP and emails it
+      const res = await authApi.login(mobile, password);
+      const { preAuthToken: pat, email: userEmail } = res.data;
+
+      setPreAuthToken(pat);
+      setMaskedEmail(maskEmail(userEmail));
+      setLoginStep('otp');
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
+      setError(msg || 'Something went wrong');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleOtpVerify = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+    try {
+      const res = await authApi.completeLogin(preAuthToken, otpInput);
       login(res.data.token);
       navigate('/');
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
-      setError(msg || 'Something went wrong');
+      setError(msg || 'Session expired. Please login again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResendOtp = async () => {
+    setError('');
+    setLoading(true);
+    try {
+      // Re-verify credentials; backend generates and emails a fresh OTP
+      const res = await authApi.login(mobile, password);
+      const { preAuthToken: pat } = res.data;
+      setPreAuthToken(pat);
+      setOtpInput('');
+    } catch {
+      setError('Failed to resend OTP. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -40,7 +94,79 @@ export default function Login() {
     setMode(newMode);
     setError('');
     setEmail('');
+    setLoginStep('credentials');
   };
+
+  // ── OTP verification step ──
+  if (loginStep === 'otp') {
+    return (
+      <div className="login-page">
+        <div className="login-container">
+          <div className="login-header">
+            <div className="logo">
+              <img src={logo} alt="SafeNotes" />
+            </div>
+            <p>Your Notes. Your Privacy. Always Safe.</p>
+          </div>
+
+          <div className="otp-info">
+            <span className="otp-icon">📧</span>
+            <p>A 6-digit OTP has been sent to</p>
+            <strong>{maskedEmail}</strong>
+          </div>
+
+          <form onSubmit={handleOtpVerify} className="login-form">
+            <div className="form-group">
+              <label htmlFor="otp">Enter OTP</label>
+              <input
+                id="otp"
+                type="text"
+                inputMode="numeric"
+                value={otpInput}
+                onChange={(e) => setOtpInput(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                placeholder="6-digit OTP"
+                maxLength={6}
+                autoFocus
+                autoComplete="one-time-code"
+                required
+              />
+            </div>
+
+            {error && <p className="error-text">{error}</p>}
+
+            <button
+              type="submit"
+              className="btn btn-primary btn-full"
+              disabled={loading || otpInput.length !== 6}
+            >
+              {loading ? 'Verifying...' : 'Verify OTP'}
+            </button>
+          </form>
+
+          <button
+            type="button"
+            className="btn btn-link btn-full"
+            onClick={handleResendOtp}
+            disabled={loading}
+          >
+            Resend OTP
+          </button>
+
+          <button
+            type="button"
+            className="btn btn-link btn-full"
+            onClick={() => { setLoginStep('credentials'); setError(''); setOtpInput(''); }}
+          >
+            ← Back to Login
+          </button>
+
+          <p className="login-footer">
+            All notes are encrypted with AES-256-GCM before storage
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="login-page">

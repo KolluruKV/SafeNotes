@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { registerUser, loginUser } from '../services/auth.js';
+import { registerUser, loginUser, completeLogin } from '../services/auth.js';
 import { authMiddleware } from '../middleware/auth.js';
 import { getAllUsers } from '../services/sheets.js';
 
@@ -19,6 +19,16 @@ router.post('/login', async (req, res) => {
   try {
     const { mobile, password } = req.body;
     const result = await loginUser(mobile, password);
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+router.post('/complete-login', async (req, res) => {
+  try {
+    const { preAuthToken, otp } = req.body;
+    const result = await completeLogin(preAuthToken, otp);
     res.json(result);
   } catch (err) {
     res.status(400).json({ error: err.message });
