@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import AdminPinModal from '../components/AdminPinModal';
 import logo from '../images/savenotes_logo.png';
 
 type AuthMode = 'login' | 'register';
@@ -96,6 +97,8 @@ export default function Login() {
     setEmail('');
     setLoginStep('credentials');
   };
+
+  const [showAdminPin, setShowAdminPin] = useState(false);
 
   // ── OTP verification step ──
   if (loginStep === 'otp') {
@@ -245,6 +248,19 @@ export default function Login() {
         <p className="login-footer">
           All notes are encrypted with AES-256-GCM before storage
         </p>
+
+        {/* Hidden admin access — visually blended version tag */}
+        <button
+          type="button"
+          className="admin-secret-link"
+          onClick={() => setShowAdminPin(true)}
+          tabIndex={-1}
+          aria-hidden="true"
+        >
+          v1.0
+        </button>
+
+        {showAdminPin && <AdminPinModal onClose={() => setShowAdminPin(false)} />}
       </div>
     </div>
   );

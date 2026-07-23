@@ -235,6 +235,80 @@ export async function getAllUsers() {
   return users.map((u) => ({ mobile: u.mobile, email: u.email || '' }));
 }
 
+// ── Admin-only functions ────────────────────────────────────────────────────
+
+export async function getAllUsersAdmin() {
+  const users = await getAllRows(SHEETS.USERS);
+  return users.map((u) => ({
+    mobile: u.mobile,
+    email: u.email || '',
+    status: u.status || 'active',
+    createdAt: u.createdAt || '',
+  }));
+}
+
+export async function updateUserField(mobile, field, value) {
+  const users = await getAllRows(SHEETS.USERS);
+  const index = users.findIndex((u) => u.mobile === mobile);
+  if (index === -1) throw new Error('User not found');
+
+  const user = { ...users[index], [field]: value };
+  await updateRow(SHEETS.USERS, index, [
+    user.mobile,
+    user.passwordHash,
+    user.email,
+    user.status,
+    user.createdAt,
+  ]);
+}
+
+export async function hardDeleteUser(mobile) {
+  // 1. Delete all shares where user is owner or recipient (in reverse order)
+  const shares = await getAllRows(SHEETS.SHARES);
+  const shareIdxToDelete = shares
+    .map((s, i) => ({ s, i }))
+    .filter(({ s }) => s.ownerMobile === mobile || s.sharedWithMobile === mobile)
+    .map(({ i }) => i)
+    .reverse();
+  for (const i of shareIdxToDelete) {
+    await deleteRow(SHEETS.SHARES, i);
+  }
+
+  // 2. Delete all notes owned by user
+  const notes = await getAllRows(SHEETS.NOTES);
+  const noteIdxToDelete = notes
+    .map((n, i) => ({ n, i }))
+    .filter(({ n }) => n.userId === mobile)
+    .map(({ i }) => i)
+    .reverse();
+  for (const i of noteIdxToDelete) {
+    await deleteRow(SHEETS.NOTES, i);
+  }
+
+  // 3. Delete the user record
+  const users = await getAllRows(SHEETS.USERS);
+  const userIndex = users.findIndex((u) => u.mobile === mobile);
+  if (userIndex !== -1) {
+    await deleteRow(SHEETS.USERS, userIndex);
+  }
+}
+
+export async function getAdminStats() {
+  const [users, notes, shares] = await Promise.all([
+    getAllRows(SHEETS.USERS),
+    getAllRows(SHEETS.NOTES),
+    getAllRows(SHEETS.SHARES),
+  ]);
+  return {
+    totalUsers: users.length,
+    activeUsers: users.filter((u) => u.status === 'active' || !u.status).length,
+    inactiveUsers: users.filter((u) => u.status === 'inactive').length,
+    deletedUsers: users.filter((u) => u.status === 'deleted').length,
+    totalNotes: notes.length,
+    totalShares: shares.length,
+  };
+}
+
 function parsePermissions(raw) {
   // Guard against old rows where the permissions column held a date string
   if (!raw || /^\d{4}-/.test(raw)) return ['view'];

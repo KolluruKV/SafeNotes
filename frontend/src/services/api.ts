@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { Note, NoteSummary, SharedNoteSummary, SharedNote, ShareEntry, UserItem, AuthResponse, PreAuthResponse, MessageResponse } from '../types';
+import type { Note, NoteSummary, SharedNoteSummary, SharedNote, ShareEntry, UserItem, AuthResponse, PreAuthResponse, MessageResponse, AdminUser, AdminStats } from '../types';
 
 const api = axios.create({
   baseURL: '/api',
@@ -76,6 +76,55 @@ export const notesApi = {
 
 export const usersApi = {
   getAll: () => api.get<UserItem[]>('/auth/users'),
+};
+
+// ── Admin API (separate axios instance using sessionStorage token) ───────────
+const adminAxios = axios.create({
+  baseURL: '/api/admin',
+  headers: { 'Content-Type': 'application/json' },
+});
+
+adminAxios.interceptors.request.use((config) => {
+  const token = sessionStorage.getItem('adminToken');
+  if (token) config.headers.Authorization = `Bearer ${token}`;
+  return config;
+});
+
+adminAxios.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      sessionStorage.removeItem('adminToken');
+      window.location.href = '/login';
+    }
+    return Promise.reject(error);
+  }
+);
+
+export const adminApi = {
+  login: (pin: string) =>
+    adminAxios.post<{ token: string; message: string }>('/login', { pin }),
+
+  createUser: (mobile: string, password: string, email: string) =>
+    adminAxios.post<MessageResponse>('/users', { mobile, password, email }),
+
+  getUsers: () =>
+    adminAxios.get<AdminUser[]>('/users'),
+
+  updateUser: (mobile: string, updates: { email?: string; status?: string }) =>
+    adminAxios.put<MessageResponse>(`/users/${encodeURIComponent(mobile)}`, updates),
+
+  softDelete: (mobile: string) =>
+    adminAxios.delete<MessageResponse>(`/users/${encodeURIComponent(mobile)}/soft`),
+
+  restoreUser: (mobile: string) =>
+    adminAxios.post<MessageResponse>(`/users/${encodeURIComponent(mobile)}/restore`),
+
+  hardDelete: (mobile: string) =>
+    adminAxios.delete<MessageResponse>(`/users/${encodeURIComponent(mobile)}/hard`),
+
+  getStats: () =>
+    adminAxios.get<AdminStats>('/stats'),
 };
 
 export default api;

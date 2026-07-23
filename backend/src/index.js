@@ -5,6 +5,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import authRoutes from './routes/auth.js';
 import notesRoutes from './routes/notes.js';
+import adminRoutes from './routes/admin.js';
 import { initializeSheets } from './services/sheets.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -28,6 +29,7 @@ app.get('/api/health', (_req, res) => {
 
 app.use('/api/auth', authRoutes);
 app.use('/api/notes', notesRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Serve built frontend in production
 if (IS_PROD) {

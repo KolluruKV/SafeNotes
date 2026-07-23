@@ -49,3 +49,20 @@ export interface MessageResponse {
 export interface ApiError {
   error: string;
 }
+
+// ── Admin types ──────────────────────────────────────────────────────────────
+export interface AdminUser {
+  mobile: string;
+  email: string;
+  status: string;
+  createdAt: string;
+}
+
+export interface AdminStats {
+  totalUsers: number;
+  activeUsers: number;
+  inactiveUsers: number;
+  deletedUsers: number;
+  totalNotes: number;
+  totalShares: number;
+}
