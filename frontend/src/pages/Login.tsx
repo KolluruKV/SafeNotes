@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -74,6 +74,13 @@ export default function Login() {
       setLoading(false);
     }
   };
+
+  // Auto-verify when all 6 digits are entered
+  useEffect(() => {
+    if (otpInput.length === 6 && loginStep === 'otp' && !loading) {
+      handleOtpVerify(new Event('submit') as unknown as React.FormEvent);
+    }
+  }, [otpInput]);
 
   const handleResendOtp = async () => {
     setError('');

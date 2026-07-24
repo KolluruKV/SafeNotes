@@ -2,7 +2,7 @@ import axios from 'axios';
 import type { Note, NoteSummary, SharedNoteSummary, SharedNote, ShareEntry, UserItem, AuthResponse, PreAuthResponse, MessageResponse, AdminUser, AdminStats } from '../types';
 
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: import.meta.env.VITE_API_URL || '/api',
   headers: { 'Content-Type': 'application/json' },
 });
 
@@ -72,10 +72,27 @@ export const notesApi = {
 
   deleteShared: (id: string) =>
     api.delete<MessageResponse>(`/notes/shared/${id}`),
+
+  recolorAll: () =>
+    api.post<{ message: string }>('/notes/recolor-all'),
 };
 
 export const usersApi = {
   getAll: () => api.get<UserItem[]>('/auth/users'),
+};
+
+export interface UserProfile {
+  mobile: string;
+  email: string;
+  firstName: string;
+  surname: string;
+  address: string;
+}
+
+export const profileApi = {
+  get: () => api.get<UserProfile>('/auth/profile'),
+  update: (data: Partial<Pick<UserProfile, 'firstName' | 'surname' | 'address'>>) =>
+    api.put<{ message: string }>('/auth/profile', data),
 };
 
 // ── Admin API (separate axios instance using sessionStorage token) ───────────

@@ -1,17 +1,20 @@
 services:
+  # ── Backend API (web service — free tier, may cold-start) ──────────────────
   - type: web
-    name: safenotes-app
+    name: safenotes-api
     runtime: node
-    region: oregon  # change to: singapore, frankfurt, ohio, virginia as needed
-    plan: free      # change to: starter, standard, etc. for paid plans
-    rootDir: .
-    buildCommand: npm install --prefix backend && npm install --include=dev --prefix frontend && npm run build --prefix frontend
-    startCommand: NODE_ENV=production node backend/src/index.js
+    region: oregon
+    plan: free
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: NODE_ENV=production node src/index.js
     envVars:
       - key: NODE_ENV
         value: production
+      - key: FRONTEND_URL
+        value: https://safenotes-app.onrender.com   # update if frontend URL differs
       - key: ENCRYPTION_KEY
-        sync: false   # set manually in Render dashboard
+        sync: false
       - key: JWT_SECRET
         sync: false
       - key: GOOGLE_SHEETS_ID
@@ -30,3 +33,19 @@ services:
         sync: false
       - key: OWNER_EMAIL
         sync: false
+
+  # ── Frontend static site (always on, no cold-start) ───────────────────────
+  - type: web
+    name: safenotes-app
+    runtime: static
+    region: oregon
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: VITE_API_URL
+        value: https://safenotes-api.onrender.com/api   # must match the backend service URL above

@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { registerUser, loginUser, completeLogin } from '../services/auth.js';
 import { authMiddleware } from '../middleware/auth.js';
-import { getAllUsers } from '../services/sheets.js';
+import { getAllUsers, getProfile, updateProfile } from '../services/sheets.js';
 
 const router = Router();
 
@@ -38,9 +38,27 @@ router.post('/complete-login', async (req, res) => {
 router.get('/users', authMiddleware, async (req, res) => {
   try {
     const users = await getAllUsers();
-    // Exclude the requesting user from the list
     const filtered = users.filter((u) => u.mobile !== req.user.mobile);
     res.json(filtered);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get('/profile', authMiddleware, async (req, res) => {
+  try {
+    const profile = await getProfile(req.user.mobile);
+    res.json(profile);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.put('/profile', authMiddleware, async (req, res) => {
+  try {
+    const { firstName, surname, address } = req.body;
+    await updateProfile(req.user.mobile, { firstName, surname, address });
+    res.json({ message: 'Profile updated' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

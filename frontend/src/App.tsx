@@ -3,6 +3,7 @@ import { AuthProvider } from './context/AuthContext';
 import { AdminProvider } from './context/AdminContext';
 import { ProtectedRoute, PublicRoute } from './components/ProtectedRoute';
 import { AdminProtectedRoute } from './components/AdminProtectedRoute';
+import ServerWakeup from './components/ServerWakeup';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import AdminDashboard from './pages/AdminDashboard';
@@ -12,8 +13,9 @@ import './styles/global.css';
 
 export default function App() {
   return (
-    <AuthProvider>
-      <AdminProvider>
+    <ServerWakeup>
+      <AuthProvider>
+        <AdminProvider>
         <BrowserRouter>
           <Routes>
             <Route element={<PublicRoute />}>
@@ -32,5 +34,6 @@ export default function App() {
         </BrowserRouter>
       </AdminProvider>
     </AuthProvider>
+    </ServerWakeup>
   );
 }

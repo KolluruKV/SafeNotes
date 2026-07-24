@@ -1,6 +1,7 @@
 export interface NoteSummary {
   id: string;
   title: string;
+  preview?: string;
   color: string;
   createdAt: string;
   updatedAt: string;

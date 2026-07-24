@@ -13,23 +13,39 @@ import {
   setSharesForNote,
   getSharedNotesByUser,
   getSharedNoteById,
+  recolorAllNotes,
 } from '../services/sheets.js';
 
 const router = Router();
 
+// 64 vivid colors — no yellows/limes/pastels so white text is always readable
 const NOTE_COLORS = [
-  '#3b9eff', // sky blue  (logo accent)
-  '#f5a623', // amber gold (logo lock)
-  '#a855f7', // violet
-  '#10d98a', // emerald
-  '#f97316', // sunset orange
-  '#e879a4', // rose pink
-  '#06b6d4', // cyan teal
-  '#facc15', // golden yellow
+  // Reds
+  '#f44336','#e53935','#ef5350','#ff1744','#d32f2f','#c62828','#b71c1c','#d50000',
+  // Pinks
+  '#e91e63','#ec407a','#f06292','#ff4081','#c2185b','#ad1457','#880e4f','#f50057',
+  // Purples
+  '#9c27b0','#ab47bc','#ba68c8','#e040fb','#7b1fa2','#6a1b9a','#aa00ff','#d500f9',
+  // Deep Purples
+  '#673ab7','#7e57c2','#9575cd','#651fff','#512da8','#4527a0','#311b92','#6200ea',
+  // Indigos & Blues
+  '#3f51b5','#5c6bc0','#283593','#304ffe','#2196f3','#1e88e5','#1976d2','#2979ff',
+  // Cyans & Teals
+  '#00bcd4','#00acc1','#0097a7','#00838f','#009688','#00897b','#00796b','#00695c',
+  // Greens
+  '#43a047','#388e3c','#2e7d32','#1b5e20',
+  // Deep Oranges
+  '#ff5722','#f4511e','#e64a19','#d84315','#ff3d00','#dd2c00','#bf360c','#e65100',
+  // Warm Oranges (deep only)
+  '#ff8f00','#ff6f00','#f57c00','#fb8c00',
 ];
 
-function pickColor() {
-  return NOTE_COLORS[Math.floor(Math.random() * NOTE_COLORS.length)];
+// Pick color by cycling through palette — avoids repeats for sequential notes
+function pickColor(index = 0) {
+  // Shuffle the order using a step that is coprime to palette length (64)
+  // step=19 ensures all 64 colors are visited before repeating
+  const STEP = 19;
+  return NOTE_COLORS[(index * STEP) % NOTE_COLORS.length];
 }
 
 router.use(authMiddleware);
@@ -44,6 +60,7 @@ router.get('/', async (req, res) => {
     const decrypted = notes.map((note) => ({
       id: note.id,
       title: decrypt(note.encryptedTitle),
+      preview: decrypt(note.encryptedDescription).slice(0, 120),
       color: note.color,
       createdAt: note.createdAt,
       updatedAt: note.updatedAt,
@@ -63,6 +80,7 @@ router.get('/shared', async (req, res) => {
     const decrypted = notes.map((note) => ({
       id: note.id,
       title: decrypt(note.encryptedTitle),
+      preview: decrypt(note.encryptedDescription).slice(0, 120),
       color: note.color,
       createdAt: note.createdAt,
       updatedAt: note.updatedAt,
@@ -154,18 +172,29 @@ router.get('/:id', async (req, res) => {
   }
 });
 
+router.post('/recolor-all', async (req, res) => {
+  try {
+    const updated = await recolorAllNotes(req.user.mobile, NOTE_COLORS);
+    res.json({ message: `Recolored ${updated} notes` });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 router.post('/', async (req, res) => {
   try {
     const { title, description } = req.body;
     if (!title?.trim()) return res.status(400).json({ error: 'Title is required' });
 
+    // Count existing notes so new note gets the next color in the rotation
+    const existingNotes = await getNotesByUser(req.user.mobile);
     const now = new Date().toISOString();
     const note = {
       id: uuidv4(),
       userId: req.user.mobile,
       encryptedTitle: encrypt(title.trim()),
       encryptedDescription: encrypt(description?.trim() || ''),
-      color: pickColor(),
+      color: pickColor(existingNotes.length),
       createdAt: now,
       updatedAt: now,
     };

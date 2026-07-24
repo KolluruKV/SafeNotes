@@ -8,7 +8,7 @@ const SHEETS = {
   SHARES: 'Shares',
 };
 
-const USER_HEADERS = ['mobile', 'passwordHash', 'email', 'status', 'createdAt'];
+const USER_HEADERS = ['mobile', 'passwordHash', 'email', 'status', 'createdAt', 'firstName', 'surname', 'address'];
 const NOTE_HEADERS = ['id', 'userId', 'encryptedTitle', 'encryptedDescription', 'color', 'createdAt', 'updatedAt'];
 const OTP_HEADERS = ['id', 'mobile', 'otpHash', 'purpose', 'noteId', 'expiresAt', 'used'];
 const SHARE_HEADERS = ['id', 'noteId', 'ownerMobile', 'sharedWithMobile', 'permissions', 'createdAt'];
@@ -199,6 +199,33 @@ export async function deleteNote(noteId, userId) {
   return true;
 }
 
+// Reassign diverse colors to all notes belonging to userId.
+// palette: the full NOTE_COLORS array from notes.js
+export async function recolorAllNotes(userId, palette) {
+  const notes = await getAllRows(SHEETS.NOTES);
+  const userNotes = notes
+    .map((n, i) => ({ note: n, idx: i }))
+    .filter(({ note }) => note.userId === userId);
+
+  const STEP = 19; // coprime to 64 — visits every color before repeating
+  for (let i = 0; i < userNotes.length; i++) {
+    const { note, idx } = userNotes[i];
+    const newColor = palette[(i * STEP) % palette.length];
+    const updated = { ...note, color: newColor, updatedAt: new Date().toISOString() };
+    await updateRow(SHEETS.NOTES, idx, [
+      updated.id,
+      updated.userId,
+      updated.encryptedTitle,
+      updated.encryptedDescription,
+      updated.color,
+      updated.createdAt,
+      updated.updatedAt,
+    ]);
+  }
+  return userNotes.length;
+}
+
+
 export async function saveOTP(mobile, otpHash, purpose, noteId = '', expiresAt) {
   const id = crypto.randomUUID();
   await appendRow(SHEETS.OTPS, [id, mobile, otpHash, purpose, noteId, expiresAt, 'false']);
@@ -259,6 +286,39 @@ export async function updateUserField(mobile, field, value) {
     user.email,
     user.status,
     user.createdAt,
+    user.firstName || '',
+    user.surname || '',
+    user.address || '',
+  ]);
+}
+
+export async function getProfile(mobile) {
+  const users = await getAllRows(SHEETS.USERS);
+  const user = users.find((u) => u.mobile === mobile);
+  if (!user) throw new Error('User not found');
+  return {
+    mobile: user.mobile,
+    email: user.email || '',
+    firstName: user.firstName || '',
+    surname: user.surname || '',
+    address: user.address || '',
+  };
+}
+
+export async function updateProfile(mobile, { firstName, surname, address }) {
+  const users = await getAllRows(SHEETS.USERS);
+  const index = users.findIndex((u) => u.mobile === mobile);
+  if (index === -1) throw new Error('User not found');
+  const user = users[index];
+  await updateRow(SHEETS.USERS, index, [
+    user.mobile,
+    user.passwordHash,
+    user.email,
+    user.status,
+    user.createdAt,
+    firstName ?? user.firstName ?? '',
+    surname  ?? user.surname  ?? '',
+    address  ?? user.address  ?? '',
   ]);
 }
 
